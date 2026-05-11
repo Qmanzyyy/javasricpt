@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Farm WebSocket Client</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; padding: 20px; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .panel { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        .log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-size: 12px; }
+        .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #4CAF50; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Smart Farm WebSocket Client</h1>
+    
+    <div id="status" class="status disconnected">Disconnected</div>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>Connection</h3>
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="joinChannel()">Join Private Channel</button>
+        </div>
+        
+        <div class="panel">
+            <h3>Device Status</h3>
+            <div id="deviceStatus">
+                <p>Dinamo X: <span id="dinamoX">-</span></p>
+                <p>Dinamo Y: <span id="dinamoY">-</span></p>
+                <p>Relay Pump: <span id="relayPump">-</span></p>
+                <p>Servo Nozzle: <span id="servoNozzle">-</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Event Log</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        const SOCKET_URL = 'http://localhost:1234';
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const status = document.getElementById('status');
+            status.textContent = connected ? 'Connected' : 'Disconnected';
+            status.className = connected ? 'status connected' : 'status disconnected';
+        }
+
+        function connect() {
+            if (socket && socket.connected) {
+                addLog('Already connected');
+                return;
+            }
+
+            socket = io(SOCKET_URL);
+
+            socket.on('connect', () => {
+                addLog('Connected to WebSocket server');
+                updateStatus(true);
+            });
+
+            socket.on('disconnect', () => {
+                addLog('Disconnected from server');
+                updateStatus(false);
+            });
+
+            socket.on('joined', (data) => {
+                addLog(`Joined channel: ${data.channel}`);
+            });
+
+            // Jadwal events
+            socket.on('jadwal:created', (data) => {
+                addLog(`Jadwal created: ${data.nama}`);
+            });
+
+            socket.on('jadwal:updated', (data) => {
+                addLog(`Jadwal updated: ${data.nama}`);
+            });
+
+            socket.on('jadwal:deleted', (data) => {
+                addLog(`Jadwal deleted: ${data.nama || data.id}`);
+            });
+
+            socket.on('jadwal:activated', (data) => {
+                addLog(`Jadwal activated: ${data.nama}`);
+            });
+
+            // Device events - Dinamo X
+            socket.on('device:dinamo_x:status_updated', (data) => {
+                addLog(`Dinamo X status: pos=${data.current_position}, active=${data.is_active}`);
+                document.getElementById('dinamoX').textContent = 
+                    `Pos: ${data.current_position}, Active: ${data.is_active}`;
+            });
+
+            socket.on('device:dinamo_x:config_updated', (data) => {
+                addLog(`Dinamo X config: mode=${data.mode}, speed=${data.speed}`);
+            });
+
+            // Device events - Dinamo Y
+            socket.on('device:dinamo_y:status_updated', (data) => {
+                addLog(`Dinamo Y status: pos=${data.current_position}, active=${data.is_active}`);
+                document.getElementById('dinamoY').textContent = 
+                    `Pos: ${data.current_position}, Active: ${data.is_active}`;
+            });
+
+            // Device events - Relay Pump
+            socket.on('device:relay_pump:status_updated', (data) => {
+                addLog(`Relay Pump: ${data.relay_state ? 'ON' : 'OFF'}`);
+                document.getElementById('relayPump').textContent = 
+                    data.relay_state ? 'ON' : 'OFF';
+            });
+
+            // Device events - Servo Nozzle
+            socket.on('device:servo_nozzle:status_updated', (data) => {
+                addLog(`Servo Nozzle angle: ${data.servo_angle}°`);
+                document.getElementById('servoNozzle').textContent = 
+                    `${data.servo_angle}°`;
+            });
+
+            // Heartbeat events
+            socket.on('device:dinamo_x:heartbeat', (data) => {
+                addLog(`Dinamo X heartbeat`);
+            });
+
+            socket.on('device:relay_pump:heartbeat', (data) => {
+                addLog(`Relay Pump heartbeat`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function joinChannel() {
+            if (!socket || !socket.connected) {
+                addLog('Not connected. Please connect first.');
+                return;
+            }
+            socket.emit('join-channel', 'smartfarm-private');
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto connect on load
+        window.onload = () => {
+            connect();
+        };
+    </script>
+</body>
+</html>
