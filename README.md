@@ -14,8 +14,8 @@ Copy file `.env.example` ke `.env` dan sesuaikan konfigurasi:
 
 ```env
 PORT=1234
-LARAVEL_API_KEY=PaniisApiKeyNesakti2026
-LARAVEL_API_URL=http://localhost:8000/api
+LARAVEL_API_KEY=apikey
+LARAVEL_API_URL=http://ur.url
 NODE_ENV=development
 ```
 
