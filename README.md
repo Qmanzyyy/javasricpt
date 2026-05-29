@@ -51,7 +51,7 @@ Response:
 
 Semua endpoint broadcast memerlukan header:
 ```
-X-API-Key: PaniisApiKeyNesakti2026
+X-API-Key: api key
 Content-Type: application/json
 ```
 
@@ -239,7 +239,7 @@ class JadwalController extends Controller
 Tambahkan di `.env` Laravel:
 ```env
 WEBSOCKET_URL=http://localhost:1234
-WEBSOCKET_API_KEY=PaniisApiKeyNesakti2026
+WEBSOCKET_API_KEY=apikey
 ```
 
 ## Event Naming Convention
@@ -261,7 +261,7 @@ WEBSOCKET_API_KEY=PaniisApiKeyNesakti2026
 ```bash
 # Test broadcast jadwal
 curl -X POST http://localhost:1234/api/broadcast/jadwal \
-  -H "X-API-Key: PaniisApiKeyNesakti2026" \
+  -H "X-API-Key: api key" \
   -H "Content-Type: application/json" \
   -d '{
     "action": "updated",
@@ -274,7 +274,7 @@ curl -X POST http://localhost:1234/api/broadcast/jadwal \
 
 # Test broadcast device
 curl -X POST http://localhost:1234/api/broadcast/device \
-  -H "X-API-Key: PaniisApiKeyNesakti2026" \
+  -H "X-API-Key: api key" \
   -H "Content-Type: application/json" \
   -d '{
     "device_type": "dinamo_x",
